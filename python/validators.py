@@ -124,7 +124,7 @@ def validate_mesh(
         "is_winding_consistent": is_winding_consistent,
         "non_manifold_edge_count": non_manifold_count,
         "degenerate_face_count": degenerate_count,
-        "volume_mm3": round(volume, 4),
+        "volume_mm3": round(float(volume), 4),
         "thin_wall_warning": thin_wall_warning,
         "issues": issues,
         "info": {

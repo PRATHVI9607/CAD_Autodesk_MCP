@@ -660,6 +660,7 @@ def handle_load_template(params: dict[str, Any]) -> dict[str, Any]:
         raise FileNotFoundError(
             f"Template '{template_id}' not found in any category directory."
         )
+    assert template_file is not None  # narrow type for Pyre2
 
     template = json.loads(template_file.read_text(encoding="utf-8"))
     merged_params = {**template.get("parameters", {}), **override_params}
@@ -886,187 +887,8 @@ def handle_ansys_list_materials(_params: dict[str, Any]) -> dict[str, Any]:
 
 
 
-# ===========================================================================
-# Fusion 360 / Autodesk Platform Services (APS) Handlers
-# ===========================================================================
-
-def _f360_bridge() -> Any:
-    """Lazy import of fusion360_bridge — avoids hard dependency at startup."""
-    import importlib
-    import sys as _sys
-    _sys.path.insert(0, str(Path(__file__).parent))
-    return importlib.import_module("fusion360_bridge")
 
 
-def handle_fusion360_upload(params: dict[str, Any]) -> dict[str, Any]:
-    """
-    Upload a model to Autodesk Platform Services (OSS) cloud storage.
-
-    Params:
-        name (str): model identifier (must exist in memory)
-        format (str, optional): export format — STEP | STL | OBJ (default STEP)
-
-    Returns: urn (base64), object_name, viewer_url, size_bytes
-    """
-    if not CADQUERY_AVAILABLE:
-        raise RuntimeError("CadQuery is not installed.")
-
-    name = str(params["name"])
-    fmt = str(params.get("format", "STEP")).upper()
-
-    model = _get_model(name)
-
-    # Export to temp file
-    suffix_map = {"STEP": ".step", "STL": ".stl", "OBJ": ".obj"}
-    if fmt not in suffix_map:
-        raise ValueError(f"Unsupported format '{fmt}'. Use STEP, STL, or OBJ.")
-
-    export_type_map = {
-        "STEP": cq.exporters.ExportTypes.STEP,
-        "STL":  cq.exporters.ExportTypes.STL,
-    }
-    tmp_path = _safe_output_path(f"{name}_f360_upload", EXPORTS_DIR, suffix_map[fmt])
-
-    if fmt in export_type_map:
-        cq.exporters.export(model, str(tmp_path), export_type_map[fmt])
-    elif fmt == "OBJ":
-        if not TRIMESH_AVAILABLE:
-            raise RuntimeError("trimesh required for OBJ export.")
-        stl_tmp = _safe_output_path(f"{name}_f360_tmp", EXPORTS_DIR, ".stl")
-        cq.exporters.export(model, str(stl_tmp), cq.exporters.ExportTypes.STL)
-        mesh = trimesh.load(str(stl_tmp))
-        mesh.export(str(tmp_path))
-        stl_tmp.unlink(missing_ok=True)
-
-    log.info("fusion360_upload: exporting '%s' as %s, uploading to APS…", name, fmt)
-
-    try:
-        bridge = _f360_bridge()
-        object_name = f"{name}{suffix_map[fmt]}"
-        urn = bridge.upload_model(str(tmp_path), object_name)
-
-        # Build viewer URL
-        viewer_url = (
-            f"https://viewer.autodesk.com/id/{urn}"
-        )
-        return {
-            "name": name,
-            "urn": urn,
-            "object_name": object_name,
-            "viewer_url": viewer_url,
-            "size_bytes": tmp_path.stat().st_size,
-            "message": f"Model '{name}' uploaded to Autodesk APS. Open viewer_url to view.",
-        }
-    finally:
-        tmp_path.unlink(missing_ok=True)
-
-
-def handle_fusion360_thumbnail(params: dict[str, Any]) -> dict[str, Any]:
-    """
-    Upload model → translate → download rendered thumbnail PNG from APS.
-
-    Params:
-        name (str): model identifier
-        width (int, optional): thumbnail width px (default 800)
-        height (int, optional): thumbnail height px (default 600)
-        output_name (str, optional): output PNG filename stem
-    """
-    name = str(params["name"])
-    width = int(params.get("width", 800))
-    height = int(params.get("height", 600))
-    out_name = str(params.get("output_name", f"{name}_f360_render"))
-
-    # Upload first
-    upload_result = handle_fusion360_upload({
-        "name": name,
-        "format": params.get("format", "STEP"),
-    })
-    urn = upload_result["urn"]
-
-    log.info("fusion360_thumbnail: translating URN %s…", urn[:20])
-
-    bridge = _f360_bridge()
-    # Translate to svf2 (needed for thumbnail endpoint)
-    bridge.translate_model(urn, "svf2")
-
-    out_path = _safe_output_path(out_name, PREVIEWS_DIR, ".png")
-    bridge.get_thumbnail(urn, str(out_path), width=width, height=height)
-
-    file_size = out_path.stat().st_size
-    log.info("fusion360_thumbnail: saved %d bytes to %s", file_size, out_path)
-
-    return {
-        "name": name,
-        "urn": urn,
-        "path": str(out_path),
-        "size_bytes": file_size,
-        "viewer_url": upload_result["viewer_url"],
-        "message": f"Fusion 360 render saved to {out_path.name}.",
-    }
-
-
-def handle_fusion360_translate(params: dict[str, Any]) -> dict[str, Any]:
-    """
-    Upload model → translate to SVF2/OBJ via APS Model Derivative API.
-
-    Params:
-        name (str): model identifier
-        output_format (str, optional): svf2 | obj | stl | thumbnail (default svf2)
-
-    Returns: manifest status, viewer_url
-    """
-    name = str(params["name"])
-    output_format = str(params.get("output_format", "svf2")).lower()
-
-    upload_result = handle_fusion360_upload({"name": name, "format": "STEP"})
-    urn = upload_result["urn"]
-
-    log.info("fusion360_translate: translating URN %s → %s…", urn[:20], output_format)
-
-    bridge = _f360_bridge()
-    manifest = bridge.translate_model(urn, output_format)
-
-    return {
-        "name": name,
-        "urn": urn,
-        "output_format": output_format,
-        "status": manifest.get("status", "success"),
-        "viewer_url": upload_result["viewer_url"],
-        "derivatives_count": len(manifest.get("derivatives", [])),
-        "message": f"Translation to {output_format} complete. Open viewer_url in browser.",
-    }
-
-
-def handle_fusion360_properties(params: dict[str, Any]) -> dict[str, Any]:
-    """
-    Upload + translate model, then fetch model properties (mass, materials, BB) from APS.
-
-    Params:
-        name (str): model identifier
-    """
-    name = str(params["name"])
-
-    upload_result = handle_fusion360_upload({"name": name, "format": "STEP"})
-    urn = upload_result["urn"]
-
-    bridge = _f360_bridge()
-    bridge.translate_model(urn, "svf2")
-
-    log.info("fusion360_properties: fetching properties for URN %s…", urn[:20])
-    props = bridge.get_model_properties(urn)
-
-    return {
-        "name": name,
-        "urn": urn,
-        "viewer_url": upload_result["viewer_url"],
-        **props,
-    }
-
-
-def handle_fusion360_check_credentials(_params: dict[str, Any]) -> dict[str, Any]:
-    """Check APS credentials and bucket configuration."""
-    bridge = _f360_bridge()
-    return bridge.check_credentials()
 
 
 # ===========================================================================
@@ -1150,10 +972,10 @@ def main() -> None:
         line = line.strip()
         if not line:
             continue
-        log.debug("recv: %s", line[:200])
+        log.debug("recv: %s", line[:200])  # pyre-ignore[16]
         response = dispatch(line)
         out = json.dumps(response)
-        log.debug("send: %s", out[:200])
+        log.debug("send: %s", out[:200])  # pyre-ignore[16]
         print(out, flush=True)
 
     log.info("cadquery_server shutting down (stdin closed).")

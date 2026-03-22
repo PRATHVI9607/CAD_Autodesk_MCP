@@ -49,7 +49,8 @@ class ServerProcess:
             cwd=str(PYTHON_SCRIPT.parent.parent),
         )
         # Wait for server_ready notification
-        assert self.proc.stdout is not None
+        assert self.proc.stdout is not None, "stdout pipe not available"
+        assert self.proc.stderr is not None, "stderr pipe not available"
         for _ in range(60):
             line = self.proc.stdout.readline().decode().strip()
             if not line:
@@ -75,7 +76,9 @@ class ServerProcess:
             "method": method,
             "params": params,
         }) + "\n"
-        assert self.proc and self.proc.stdin and self.proc.stdout
+        assert self.proc is not None, "Server not started"
+        assert self.proc.stdin is not None, "stdin pipe not available"
+        assert self.proc.stdout is not None, "stdout pipe not available"
         self.proc.stdin.write(request.encode())
         self.proc.stdin.flush()
         while True:
