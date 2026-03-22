@@ -116,7 +116,8 @@ server.tool(
       "mirror","pattern_linear","pattern_circular",
     ]),
     output_name: ModelName.optional(),
-    op_params:   z.record(z.unknown()).optional().default({}),
+    op_params:   z.record(z.unknown()).optional().default({})
+      .describe("Op params — fillet:{radius}, chamfer:{length}, shell:{thickness}, extrude:{distance}, revolve:{angle}, boolean_*:{other}, mirror:{plane}, pattern_linear:{direction,spacing,count}, pattern_circular:{radius,count}"),
   },
   async (input) => toMcpContent(await applyOperation(input as Record<string, unknown>))
 );

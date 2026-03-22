@@ -432,7 +432,7 @@ def handle_apply_operation(params: dict[str, Any]) -> dict[str, Any]:
         result = model.revolve(angle, axisStart=axis_origin, axisEnd=axis_dir)
 
     elif operation in ("boolean_union", "boolean_difference", "boolean_intersection"):
-        other_name = str(op_p.get("other_model", ""))
+        other_name = str(op_p.get("other_model", op_p.get("other", "")))
         other = _get_model(other_name)
         if operation == "boolean_union":
             result = model.union(other)
