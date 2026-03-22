@@ -49,6 +49,7 @@ class ServerProcess:
             cwd=str(PYTHON_SCRIPT.parent.parent),
         )
         # Wait for server_ready notification
+        assert self.proc is not None, "Popen failed to start"
         assert self.proc.stdout is not None, "stdout pipe not available"
         assert self.proc.stderr is not None, "stderr pipe not available"
         for _ in range(60):
