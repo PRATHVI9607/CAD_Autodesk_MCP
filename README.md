@@ -204,7 +204,3 @@ cad-mcp/
 - No raw Python stack traces exposed to MCP clients
 
 ---
-
-## 📄 License
-
-MIT
