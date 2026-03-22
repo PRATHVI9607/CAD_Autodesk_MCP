@@ -1,0 +1,14 @@
+{
+  "name": "Spur Gear",
+  "description": "Simple spur gear. Parametric module, number of teeth, width, bore diameter.",
+  "category": "mechanical",
+  "base_shape": "cylinder",
+  "units": "mm",
+  "parameters": {
+    "module": 2,
+    "teeth": 20,
+    "width": 10,
+    "bore_diameter": 8
+  },
+  "tags": ["gear", "spur", "transmission", "mechanical"]
+}

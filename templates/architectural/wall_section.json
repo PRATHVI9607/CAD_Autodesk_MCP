@@ -1,0 +1,13 @@
+{
+  "name": "Architectural Wall Section",
+  "description": "Straight wall section with configurable length, height, and thickness.",
+  "category": "architectural",
+  "base_shape": "box",
+  "units": "mm",
+  "parameters": {
+    "length": 3000,
+    "height": 2700,
+    "thickness": 200
+  },
+  "tags": ["wall", "architectural", "structural", "concrete"]
+}

@@ -1,0 +1,12 @@
+{
+  "name": "Torus Ring",
+  "description": "Ring or donut shape. Ideal for jewelry, gaskets, and organic loops.",
+  "category": "organic",
+  "base_shape": "torus",
+  "units": "mm",
+  "parameters": {
+    "radius_major": 20,
+    "radius_minor": 5
+  },
+  "tags": ["torus", "ring", "donut", "organic", "jewelry", "gasket"]
+}

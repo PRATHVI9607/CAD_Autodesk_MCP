@@ -1,0 +1,45 @@
+# ── Node ─────────────────────────────────────────────────────────────────────
+node_modules/
+dist/
+*.js.map
+
+# ── Skills / AI assistant context (not part of the project) ──────────────────
+everything-claude-code/
+
+# ── Python virtualenv (uv) ────────────────────────────────────────────────────
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+.pytest_cache/
+
+# ── Generated model files (large binaries, not version controlled) ────────────
+models/exports/*
+models/previews/*
+!models/exports/.gitkeep
+!models/previews/.gitkeep
+
+# ── Logs ─────────────────────────────────────────────────────────────────────
+logs/*.log
+
+# ── Test coverage ─────────────────────────────────────────────────────────────
+coverage/
+.nyc_output/
+htmlcov/
+.coverage
+
+# ── OS ───────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── IDE ───────────────────────────────────────────────────────────────────────
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+
+# ── Secrets — rename .mcp.json.example → .mcp.json and fill in your keys ─────
+# .mcp.json is committed with placeholder values — DO NOT commit real keys

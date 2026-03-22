@@ -1,0 +1,11 @@
+{
+  "name": "Organic Blob",
+  "description": "Smooth organic sphere-like form. Use as a starting point for freeform shapes.",
+  "category": "organic",
+  "base_shape": "sphere",
+  "units": "mm",
+  "parameters": {
+    "radius": 25
+  },
+  "tags": ["organic", "freeform", "blob", "smooth"]
+}

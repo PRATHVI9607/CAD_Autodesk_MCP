@@ -1,0 +1,14 @@
+{
+  "name": "Mounting Bracket",
+  "description": "L-shaped mounting bracket with configurable arm lengths and thickness.",
+  "category": "mechanical",
+  "base_shape": "box",
+  "units": "mm",
+  "parameters": {
+    "arm1_length": 40,
+    "arm2_length": 30,
+    "width": 20,
+    "thickness": 3
+  },
+  "tags": ["bracket", "mounting", "structural", "L-bracket"]
+}

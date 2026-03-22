@@ -1,0 +1,13 @@
+{
+  "name": "Hex Nut M6",
+  "description": "Standard M6 hex nut. Parametric across-flats width and height.",
+  "category": "mechanical",
+  "base_shape": "cylinder",
+  "units": "mm",
+  "parameters": {
+    "across_flats": 10,
+    "height": 5,
+    "thread_diameter": 6
+  },
+  "tags": ["fastener", "nut", "M6", "hex", "metric"]
+}

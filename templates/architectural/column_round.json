@@ -1,0 +1,12 @@
+{
+  "name": "Round Column",
+  "description": "Cylindrical architectural column with configurable radius and height.",
+  "category": "architectural",
+  "base_shape": "cylinder",
+  "units": "mm",
+  "parameters": {
+    "radius": 150,
+    "height": 3000
+  },
+  "tags": ["column", "pillar", "architectural", "structural"]
+}

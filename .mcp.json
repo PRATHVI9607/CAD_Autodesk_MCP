@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "cad-mcp": {
+      "command": "node",
+      "args": ["dist/index.js"],
+      "env": {
+        "CAD_MCP_MODELS_DIR": "./models",
+        "CAD_MCP_LOGS_DIR": "./logs",
+        "CAD_MCP_PYTHON_CMD": ".venv/Scripts/python.exe",
+        "CAD_MCP_GEOMETRY_TIMEOUT_MS": "30000",
+        "CAD_MCP_F360_TIMEOUT_MS": "180000",
+        "APS_CLIENT_ID": "YOUR_APS_CLIENT_ID_HERE",
+        "APS_CLIENT_SECRET": "YOUR_APS_CLIENT_SECRET_HERE",
+        "APS_BUCKET_KEY": "cad-mcp-models"
+      }
+    }
+  }
+}

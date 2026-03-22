@@ -1,0 +1,13 @@
+{
+  "name": "Concrete Slab",
+  "description": "Flat rectangular slab with configurable length, width, and depth.",
+  "category": "architectural",
+  "base_shape": "box",
+  "units": "mm",
+  "parameters": {
+    "width": 5000,
+    "depth": 5000,
+    "height": 200
+  },
+  "tags": ["slab", "floor", "architectural", "concrete"]
+}

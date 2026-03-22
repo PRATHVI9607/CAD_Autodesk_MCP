@@ -1,0 +1,14 @@
+{
+  "name": "Hex Bolt M6",
+  "description": "Standard M6 hex head bolt. Parametric length, head diameter, and shank diameter.",
+  "category": "mechanical",
+  "base_shape": "cylinder",
+  "units": "mm",
+  "parameters": {
+    "shank_diameter": 6,
+    "shank_length": 25,
+    "head_diameter": 10,
+    "head_height": 4
+  },
+  "tags": ["fastener", "bolt", "M6", "hex", "metric"]
+}
