@@ -383,7 +383,32 @@ def handle_apply_operation(params: dict[str, Any]) -> dict[str, Any]:
 
     if operation == "fillet":
         radius = _validate_dimension(float(op_p.get("radius", 1.0)), "radius")
-        result = model.edges().fillet(radius)
+        # Guard: fillet radius must be < half of the thinnest bounding-box dimension
+        try:
+            bb = model.val().BoundingBox()
+            min_dim = min(bb.xmax - bb.xmin, bb.ymax - bb.ymin, bb.zmax - bb.zmin)
+            max_safe = min_dim * 0.4  # conservative 40% limit
+            if radius > max_safe:
+                raise ValueError(
+                    f"Fillet radius {radius}mm is too large for this geometry. "
+                    f"Thinnest dimension is {min_dim:.1f}mm so max safe radius is ~{max_safe:.1f}mm. "
+                    f"Use radius ≤ {max_safe:.1f}mm."
+                )
+        except ValueError:
+            raise
+        except Exception:
+            pass  # skip guard if BoundingBox fails
+        try:
+            result = model.edges().fillet(radius)
+        except Exception as e:
+            err = str(e)
+            if "BRep_API" in err or "command not done" in err.lower():
+                raise ValueError(
+                    f"Fillet radius {radius}mm failed (BRep error). "
+                    "The radius is probably too large for the geometry. "
+                    "Try a smaller radius — rule of thumb: radius ≤ 40% of thinnest wall."
+                ) from e
+            raise
 
     elif operation == "chamfer":
         length = _validate_dimension(float(op_p.get("length", 1.0)), "length")
@@ -1053,18 +1078,11 @@ _HANDLERS = {
     "export_model":             handle_export_model,
     "query_properties":         handle_query_properties,
     "apply_operation":          handle_apply_operation,
-    "render_preview":           handle_render_preview,
     "validate_model":           handle_validate_model,
     "list_templates":           handle_list_templates,
     "load_template":            handle_load_template,
     "import_file":              handle_import_file,
     "sketch_2d":                handle_sketch_2d,
-    # Autodesk Fusion 360 / APS cloud integration
-    "fusion360_upload":         handle_fusion360_upload,
-    "fusion360_thumbnail":      handle_fusion360_thumbnail,
-    "fusion360_translate":      handle_fusion360_translate,
-    "fusion360_properties":     handle_fusion360_properties,
-    "fusion360_check_credentials": handle_fusion360_check_credentials,
     "ping": lambda _: {"pong": True},
 }
 

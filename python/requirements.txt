@@ -1,18 +1,8 @@
 # Core CAD engine
 cadquery>=2.4.0
-cadquery-ocp
-
-# Numerical / scientific
-numpy>=1.26.0
-scipy>=1.12.0
 
 # Mesh analysis and validation
 trimesh>=4.4.0
-pymeshlab>=2023.12.post1
-
-# Autodesk Platform Services (APS) / Fusion 360 integration
-# Required for cloud upload, SVF2 translation, thumbnail rendering
-requests>=2.31.0
 
 # Testing
 pytest>=8.0.0

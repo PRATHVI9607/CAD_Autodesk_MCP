@@ -2,7 +2,7 @@
 /**
  * test-http-api.mjs — cad-mcp HTTP Integration Test Suite
  *
- * Tests all 14 CAD tools against the live HTTP server.
+ * Tests all 9 core CAD tools against the live HTTP server.
  * Run: node tests/test-http-api.mjs
  *
  * Server must be running: npm run start:http
@@ -91,11 +91,11 @@ async function main() {
     assert(data.status === "ok", `Expected status=ok, got ${JSON.stringify(data)}`);
   });
 
-  await test("GET /tools returns 14 tools", async () => {
+  await test("GET /tools returns 9 tools", async () => {
     const res = await fetch(`${BASE_URL}/tools`);
     const data = await res.json();
     assert(res.status === 200);
-    assert(data.count === 14, `Expected 14 tools, got ${data.count}: ${data.tools?.map(t=>t.name).join(", ")}`);
+    assert(data.count === 9, `Expected 9 tools, got ${data.count}: ${data.tools?.map(t=>t.name).join(", ")}`);
   });
 
   await test("GET /exports returns file list", async () => {
@@ -297,23 +297,6 @@ async function main() {
     assertOk(data);
   });
 
-  // ── 10. cad_fusion360_credentials ─────────────────────────────────────────
-  section("cad_fusion360_credentials");
-
-  await test("Credentials check returns structured response", async () => {
-    const { data } = await call("cad_fusion360_credentials", {});
-    // Should return either configured:true or configured:false with instructions
-    // Never crash unhandled
-    assert(data !== null && data !== undefined,
-      "Expected a response object");
-    const d = data?.data ?? data;
-    assert(
-      typeof d?.configured === "boolean" ||
-      d?.content?.[0]?.text?.includes("APS") ||
-      d?.content?.[0]?.text?.includes("configured"),
-      `Expected configured field, got: ${JSON.stringify(d).slice(0,300)}`
-    );
-  });
 
   // ── Results ────────────────────────────────────────────────────────────────
   const total = passed + failed + skipped;

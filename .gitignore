@@ -5,6 +5,7 @@ dist/
 
 # ── Skills / AI assistant context (not part of the project) ──────────────────
 everything-claude-code/
+.claude/
 
 # ── Python virtualenv (uv) ────────────────────────────────────────────────────
 .venv/
