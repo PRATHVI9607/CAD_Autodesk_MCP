@@ -192,6 +192,55 @@ server.tool(
 );
 
 // ---------------------------------------------------------------------------
+// ── Tool 10: cad_translate_model ────────────────────────────────────────
+
+server.tool(
+  "cad_translate_model",
+  "Move a model by (x, y, z) offset in mm. Use this to position parts before union — " +
+  "e.g. move an arm 45mm in X and 45mm in Y so it sits at a drone frame corner.\n" +
+  "IMPORTANT: Run ONE step at a time. Wait for each step to succeed before starting the next.",
+  {
+    name:        ModelName,
+    x:           z.number().default(0).describe("X offset in mm"),
+    y:           z.number().default(0).describe("Y offset in mm"),
+    z_offset:    z.number().default(0).describe("Z offset in mm"),
+    output_name: ModelName.optional(),
+  },
+  async (input) => {
+    const { name, x, y, z_offset, output_name } = input as Record<string, unknown>;
+    try {
+      const result = await bridge.call("translate_model", { name, x, y, z: z_offset, output_name });
+      return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return { content: [{ type: "text" as const, text: `Error: ${msg}` }], isError: true };
+    }
+  }
+);
+
+// ── Tool 11: cad_repair_mesh ─────────────────────────────────────────────
+
+server.tool(
+  "cad_repair_mesh",
+  "Repair a model's STL mesh for 3D printing — fixes winding, normals, holes, " +
+  "removes degenerate and duplicate faces. Reports whether result is watertight.",
+  {
+    name:        ModelName,
+    output_name: ModelName.optional(),
+  },
+  async (input) => {
+    const { name, output_name } = input as Record<string, unknown>;
+    try {
+      const result = await bridge.call("repair_mesh", { name, output_name });
+      return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return { content: [{ type: "text" as const, text: `Error: ${msg}` }], isError: true };
+    }
+  }
+);
+
+// ---------------------------------------------------------------------------
 // Start
 // ---------------------------------------------------------------------------
 
@@ -201,7 +250,7 @@ async function main(): Promise<void> {
   process.on("SIGINT",  () => { void shutdown(); });
   process.on("SIGTERM", () => { void shutdown(); });
   await server.connect(transport);
-  process.stderr.write("cad-mcp ready — 9 CAD tools active (stdio)\n");
+  process.stderr.write("cad-mcp ready — 11 CAD tools active (stdio)\n");
 }
 
 main().catch((err: unknown) => {

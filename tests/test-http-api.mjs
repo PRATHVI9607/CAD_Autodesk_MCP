@@ -91,11 +91,11 @@ async function main() {
     assert(data.status === "ok", `Expected status=ok, got ${JSON.stringify(data)}`);
   });
 
-  await test("GET /tools returns 9 tools", async () => {
+  await test("GET /tools returns 11 tools", async () => {
     const res = await fetch(`${BASE_URL}/tools`);
     const data = await res.json();
     assert(res.status === 200);
-    assert(data.count === 9, `Expected 9 tools, got ${data.count}: ${data.tools?.map(t=>t.name).join(", ")}`);
+    assert(data.count === 11, `Expected 11 tools, got ${data.count}: ${data.tools?.map(t=>t.name).join(", ")}`);
   });
 
   await test("GET /exports returns file list", async () => {

@@ -12,6 +12,7 @@ Error:    {"jsonrpc":"2.0","id":1,"error":{"code":-32000,"message":"..."}}
 
 from __future__ import annotations
 
+import atexit
 import json
 import logging
 import os
@@ -35,6 +36,7 @@ logging.basicConfig(
         logging.StreamHandler(sys.stderr),
     ],
 )
+atexit.register(lambda: logging.shutdown())  # pyre-ignore[6]
 log = logging.getLogger("cadquery_server")
 
 # ---------------------------------------------------------------------------
@@ -435,11 +437,11 @@ def handle_apply_operation(params: dict[str, Any]) -> dict[str, Any]:
         other_name = str(op_p.get("other_model", op_p.get("other", "")))
         other = _get_model(other_name)
         if operation == "boolean_union":
-            result = model.union(other)
+            result = model.union(other).clean()
         elif operation == "boolean_difference":
-            result = model.cut(other)
+            result = model.cut(other).clean()
         else:
-            result = model.intersect(other)
+            result = model.intersect(other).clean()
 
     elif operation == "mirror":
         plane = str(op_p.get("plane", "XY")).upper()
@@ -885,10 +887,121 @@ def handle_ansys_list_materials(_params: dict[str, Any]) -> dict[str, Any]:
             "count": len(MATERIAL_PRESETS),
         }
 
+def handle_translate_model(params: dict[str, Any]) -> dict[str, Any]:
+    """
+    Translate (move) a model by a (x, y, z) offset.
+
+    Params:
+        name (str): source model identifier
+        x, y, z (float): translation offsets in mm (default 0)
+        output_name (str, optional): result model name (default: overwrites source)
+
+    Example: move arm 45mm in X and 45mm in Y before unioning with body
+    """
+    if not CADQUERY_AVAILABLE:
+        raise RuntimeError("CadQuery is not installed.")
+
+    name = str(params["name"])
+    x = float(params.get("x", 0.0))
+    y = float(params.get("y", 0.0))
+    z = float(params.get("z", 0.0))
+    out_name = str(params.get("output_name", name))
+
+    model = _get_model(name)
+    result = model.translate((x, y, z))
+    _models[out_name] = result
+
+    log.info("translate_model: '%s' by (%g, %g, %g) → '%s'", name, x, y, z, out_name)
+    return {
+        "name": out_name,
+        "source": name,
+        "translation": {"x": x, "y": y, "z": z},
+        "message": f"Model '{name}' translated by ({x}, {y}, {z}mm) → stored as '{out_name}'.",
+    }
 
 
+def handle_repair_mesh(params: dict[str, Any]) -> dict[str, Any]:
+    """
+    Repair a model's mesh for 3D printing.
 
+    Exports to STL, repairs with trimesh (winding, normals, holes, degenerate/duplicate
+    faces), then saves the repaired STL to the exports directory.
 
+    Params:
+        name (str): in-memory model identifier
+        output_name (str, optional): repaired file stem (default: <name>_repaired)
+
+    Returns: path, is_watertight, faces_before, faces_after, size_bytes
+    """
+    if not CADQUERY_AVAILABLE:
+        raise RuntimeError("CadQuery is not installed.")
+    if not TRIMESH_AVAILABLE:
+        raise RuntimeError("trimesh is required for mesh repair — pip install trimesh")
+
+    name = str(params["name"])
+    out_name = str(params.get("output_name", f"{name}_repaired"))
+
+    model = _get_model(name)
+
+    # Export to a temp STL
+    tmp_stl = _safe_output_path(f"{name}_repair_tmp", EXPORTS_DIR, ".stl")
+    cq.exporters.export(model, str(tmp_stl), cq.exporters.ExportTypes.STL)
+
+    # Load with trimesh — force=mesh avoids returning a Scene for multi-body STLs
+    raw = trimesh.load(str(tmp_stl), force="mesh")
+    if isinstance(raw, trimesh.scene.scene.Scene):
+        mesh = trimesh.util.concatenate(list(raw.geometry.values()))
+    else:
+        mesh = raw
+    faces_before = int(len(mesh.faces))
+
+    # Repair sequence — using trimesh 4.x compatible API
+    # mesh.process() removes duplicate verts/faces and degenerate tris
+    try:
+        mesh.process(validate=True)
+    except Exception:
+        mesh.process(validate=False)
+    for fn in (
+        trimesh.repair.fix_winding,
+        trimesh.repair.fix_normals,
+        trimesh.repair.fix_inversion,
+        trimesh.repair.fill_holes,
+    ):
+        try:
+            fn(mesh)
+        except Exception as e:
+            log.warning("repair_mesh: %s skipped: %s", fn.__name__, e)
+
+    faces_after = int(len(mesh.faces))
+
+    # Save repaired STL
+    out_path = _safe_output_path(out_name, EXPORTS_DIR, ".stl")
+    mesh.export(str(out_path))
+    tmp_stl.unlink(missing_ok=True)
+
+    # Keep the original CadQuery model available under the output name
+    # so downstream tools (validate_model, export STEP) still work.
+    # The repaired STL is what's saved to disk; _models[out_name] gives
+    # access to the BRep for STEP export.
+    _models[out_name] = model
+
+    log.info("repair_mesh: '%s' → '%s' watertight=%s faces %d→%d",
+             name, out_name, mesh.is_watertight, faces_before, faces_after)
+    return {
+        "name": out_name,
+        "source": name,
+        "stl_path": str(out_path),
+        "is_watertight": bool(mesh.is_watertight),
+        "faces_before": faces_before,
+        "faces_after": faces_after,
+        "size_bytes": out_path.stat().st_size,
+        "message": (
+            f"Mesh repaired: {faces_before}→{faces_after} faces, "
+            f"watertight={mesh.is_watertight}. "
+            f"Repaired STL saved to {out_path.name}. "
+            f"Use cad_export_model name='{out_name}' format='STEP' for STEP export."
+        ),
+    }
 
 
 # ===========================================================================
@@ -900,6 +1013,8 @@ _HANDLERS = {
     "export_model":             handle_export_model,
     "query_properties":         handle_query_properties,
     "apply_operation":          handle_apply_operation,
+    "translate_model":          handle_translate_model,
+    "repair_mesh":              handle_repair_mesh,
     "validate_model":           handle_validate_model,
     "list_templates":           handle_list_templates,
     "load_template":            handle_load_template,

@@ -20,7 +20,7 @@ import time
 import os
 from pathlib import Path
 
-import pytest
+import pytest  # pyre-ignore[21]
 
 # ------------------------------------------------------------------
 # Helpers — talk to cadquery_server.py via subprocess
@@ -48,12 +48,13 @@ class ServerProcess:
             env=env,
             cwd=str(PYTHON_SCRIPT.parent.parent),
         )
-        # Wait for server_ready notification
-        assert self.proc is not None, "Popen failed to start"
-        assert self.proc.stdout is not None, "stdout pipe not available"
-        assert self.proc.stderr is not None, "stderr pipe not available"
+        proc = self.proc
+        assert proc is not None, "Popen failed to start"
+        # Capture pipe handles into locals — Pyre2 only narrows local var types
+        stdout = proc.stdout
+        assert stdout is not None, "stdout pipe missing"
         for _ in range(60):
-            line = self.proc.stdout.readline().decode().strip()
+            line = stdout.readline().decode().strip()
             if not line:
                 time.sleep(0.5)
                 continue
@@ -77,13 +78,17 @@ class ServerProcess:
             "method": method,
             "params": params,
         }) + "\n"
-        assert self.proc is not None, "Server not started"
-        assert self.proc.stdin is not None, "stdin pipe not available"
-        assert self.proc.stdout is not None, "stdout pipe not available"
-        self.proc.stdin.write(request.encode())
-        self.proc.stdin.flush()
+        proc = self.proc
+        assert proc is not None, "Server not started — call start() first"
+        # Capture pipe handles into locals — Pyre2 only narrows local var types
+        stdin = proc.stdin
+        stdout = proc.stdout
+        assert stdin is not None, "stdin pipe missing"
+        assert stdout is not None, "stdout pipe missing"
+        stdin.write(request.encode())
+        stdin.flush()
         while True:
-            line = self.proc.stdout.readline().decode().strip()
+            line = stdout.readline().decode().strip()
             if not line:
                 continue
             resp = json.loads(line)
