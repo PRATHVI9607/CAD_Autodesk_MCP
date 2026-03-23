@@ -1,9 +1,15 @@
-# Core CAD engine
-cadquery>=2.4.0
+# ─── OpenCASCADE Python bindings (MUST be listed before cadquery) ──────────────
+# cadquery-ocp provides the OCP module. Only has wheels for Python 3.9-3.12.
+# Requires Python ≤ 3.12 — use: uv venv .venv --python 3.12
+cadquery-ocp>=7.7.0
 
-# Mesh analysis and validation
+# ─── Core CAD engine ──────────────────────────────────────────────────────────
+cadquery>=2.3.0
+
+# ─── Mesh analysis, validation and repair ─────────────────────────────────────
 trimesh>=4.4.0
+scipy>=1.10.0        # required by trimesh.repair for fix_normals / connected-components
 
-# Testing
+# ─── Testing ──────────────────────────────────────────────────────────────────
 pytest>=8.0.0
 pytest-cov>=5.0.0
