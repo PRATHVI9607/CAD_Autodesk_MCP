@@ -53,7 +53,7 @@ export const ExportFormatSchema = z.enum(["STL", "STEP", "OBJ", "GLTF", "DXF", "
 export const ExportModelSchema = z.object({
   name: ModelNameSchema.describe("Model identifier to export"),
   format: ExportFormatSchema.default("STL"),
-  output_name: ModelNameSchema.optional().describe("Override output filename (default: model name)"),
+  output_name: z.string().min(1).max(128).regex(/^[A-Za-z0-9_\-\.]+$/).optional().describe("Override output filename (default: model name)"),
 });
 export type ExportModelInput = z.infer<typeof ExportModelSchema>;
 

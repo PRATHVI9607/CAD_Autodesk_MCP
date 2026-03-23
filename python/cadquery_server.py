@@ -73,14 +73,16 @@ except ImportError:
 # ---------------------------------------------------------------------------
 # Security helpers
 # ---------------------------------------------------------------------------
-_SAFE_NAME_RE = re.compile(r"^[A-Za-z0-9_\-]{1,128}$")
+_SAFE_NAME_RE = re.compile(r"^[A-Za-z0-9_\-\.]{1,256}$")
 
 
 def _safe_output_path(name: str, subdir: Path, suffix: str) -> Path:
     """Build a safe output path, rejecting traversal and bad characters."""
+    if suffix and name.lower().endswith(suffix.lower()):
+        name = name[: -len(suffix)]  # pyre-ignore[6]
     if not _SAFE_NAME_RE.match(name):
         raise ValueError(
-            f"Invalid name '{name}'. Use only letters, digits, underscores, hyphens (max 128 chars)."
+            f"Invalid name '{name}'. Use only letters, digits, underscores, hyphens, dots (max 256 chars)."
         )
     path = (subdir / f"{name}{suffix}").resolve()
     # Ensure the resolved path is still inside the expected directory

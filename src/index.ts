@@ -83,7 +83,7 @@ server.tool(
   {
     name:        ModelName,
     format:      z.enum(["STL","STEP","OBJ","GLTF","DXF","SVG"]).default("STL"),
-    output_name: ModelName.optional(),
+    output_name: z.string().min(1).max(128).regex(/^[A-Za-z0-9_\-\.]+$/).optional(),
   },
   async (input) => toMcpContent(await exportModel(input as Record<string, unknown>))
 );
