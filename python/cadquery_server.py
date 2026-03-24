@@ -501,6 +501,7 @@ def handle_render_preview(params: dict[str, Any]) -> dict[str, Any]:
         elevation (float, optional): camera elevation degrees (default 30)
         width (int, optional): image width px (default 800)
         height (int, optional): image height px (default 600)
+        background (str, optional): "dark" (default), "light", or "transparent"
     """
     name = str(params["name"])
     out_name = str(params.get("output_name", f"{name}_preview"))
@@ -508,6 +509,27 @@ def handle_render_preview(params: dict[str, Any]) -> dict[str, Any]:
     elevation = float(params.get("elevation", 30))
     img_w = int(params.get("width", 800))
     img_h = int(params.get("height", 600))
+    background = str(params.get("background", "dark")).lower()
+
+    if background not in ("dark", "light", "transparent"):
+        raise ValueError(f"Invalid background '{background}'. Must be 'dark', 'light', or 'transparent'.")
+
+    # Resolve background/foreground colours
+    if background == "dark":
+        bg_color = "#1a1a2e"
+        fg_color = "#aaaaaa"
+        title_color = "#ffffff"
+        edge_color = "#ffffff22"
+    elif background == "light":
+        bg_color = "#ffffff"
+        fg_color = "#333333"
+        title_color = "#000000"
+        edge_color = "#00000022"
+    else:  # transparent — use white as working colour then save with alpha
+        bg_color = "none"
+        fg_color = "#333333"
+        title_color = "#000000"
+        edge_color = "#00000022"
 
     if not CADQUERY_AVAILABLE:
         raise RuntimeError("CadQuery is not installed.")
@@ -529,12 +551,12 @@ def handle_render_preview(params: dict[str, Any]) -> dict[str, Any]:
     stl_tmp.unlink(missing_ok=True)
 
     # Build matplotlib 3D preview
-    fig = plt.figure(figsize=(img_w / 100, img_h / 100), dpi=100, facecolor="#1a1a2e")
-    ax = fig.add_subplot(111, projection="3d", facecolor="#1a1a2e")
+    fig = plt.figure(figsize=(img_w / 100, img_h / 100), dpi=100, facecolor=bg_color)
+    ax = fig.add_subplot(111, projection="3d", facecolor=bg_color)
 
     verts = [mesh.vertices[face] for face in mesh.faces]
     poly = Poly3DCollection(
-        verts, alpha=0.85, linewidths=0.2, edgecolors="#ffffff22"
+        verts, alpha=0.85, linewidths=0.2, edgecolors=edge_color
     )
     poly.set_facecolor("#4a9eff")
     ax.add_collection3d(poly)
@@ -545,17 +567,22 @@ def handle_render_preview(params: dict[str, Any]) -> dict[str, Any]:
 
     for pane in [ax.xaxis.pane, ax.yaxis.pane, ax.zaxis.pane]:
         pane.fill = False
-        pane.set_edgecolor("#ffffff22")
+        pane.set_edgecolor(edge_color)
 
-    ax.tick_params(colors="#aaaaaa", labelsize=7)
-    ax.set_xlabel("X (mm)", color="#aaaaaa", fontsize=8)
-    ax.set_ylabel("Y (mm)", color="#aaaaaa", fontsize=8)
-    ax.set_zlabel("Z (mm)", color="#aaaaaa", fontsize=8)
-    ax.set_title(f"Model: {name}", color="#ffffff", fontsize=10, pad=12)
+    ax.tick_params(colors=fg_color, labelsize=7)
+    ax.set_xlabel("X (mm)", color=fg_color, fontsize=8)
+    ax.set_ylabel("Y (mm)", color=fg_color, fontsize=8)
+    ax.set_zlabel("Z (mm)", color=fg_color, fontsize=8)
+    ax.set_title(f"Model: {name}", color=title_color, fontsize=10, pad=12)
 
     out_path = _safe_output_path(out_name, PREVIEWS_DIR, ".png")
     plt.tight_layout()
-    plt.savefig(str(out_path), dpi=100, bbox_inches="tight", facecolor=fig.get_facecolor())
+    save_kwargs: dict[str, Any] = {"dpi": 100, "bbox_inches": "tight"}
+    if background == "transparent":
+        save_kwargs["transparent"] = True
+    else:
+        save_kwargs["facecolor"] = fig.get_facecolor()
+    plt.savefig(str(out_path), **save_kwargs)
     plt.close(fig)
 
     file_size = out_path.stat().st_size
@@ -566,6 +593,7 @@ def handle_render_preview(params: dict[str, Any]) -> dict[str, Any]:
         "path": str(out_path),
         "size_bytes": file_size,
         "resolution": f"{img_w}x{img_h}",
+        "background": background,
         "message": f"Preview for '{name}' saved to {out_path.name}.",
     }
 
@@ -1015,6 +1043,7 @@ _HANDLERS = {
     "export_model":             handle_export_model,
     "query_properties":         handle_query_properties,
     "apply_operation":          handle_apply_operation,
+    "render_preview":           handle_render_preview,
     "translate_model":          handle_translate_model,
     "repair_mesh":              handle_repair_mesh,
     "validate_model":           handle_validate_model,

@@ -12,6 +12,7 @@ import { createModel }     from "./tools/create-model.js";
 import { exportModel }     from "./tools/export-model.js";
 import { queryProperties } from "./tools/query-model.js";
 import { applyOperation }  from "./tools/modify-model.js";
+import { renderPreview }   from "./tools/render-preview.js";
 import { validateModel }   from "./tools/validate-model.js";
 import {
   listTemplates,
@@ -31,6 +32,7 @@ const TOOLS: Record<string, (params: Record<string, unknown>) => Promise<unknown
   cad_export_model:     exportModel,
   cad_query_properties: queryProperties,
   cad_apply_operation:  applyOperation,
+  cad_render_preview:   renderPreview,
   cad_translate_model:  async (p) => bridge.call("translate_model", p),
   cad_repair_mesh:      async (p) => bridge.call("repair_mesh", p),
   cad_validate_model:   validateModel,
@@ -45,6 +47,7 @@ const TOOL_DESCRIPTIONS: Record<string, string> = {
   cad_export_model:     "Export a model to STL, STEP, OBJ, GLTF, DXF, or SVG",
   cad_query_properties: "Query volume, surface area, bounding box, and centre of mass",
   cad_apply_operation:  "Apply fillet, chamfer, shell, extrude, boolean ops, mirror, pattern",
+  cad_render_preview:   "Render a PNG preview of a model with selectable background (dark, light, transparent)",
   cad_translate_model:  "Move a model by (x, y, z) offset in mm to position it for assembly",
   cad_repair_mesh:      "Repair a model's STL mesh (fix normals, holes, degenerate faces)",
   cad_validate_model:   "Check a model for 3D printability issues",
