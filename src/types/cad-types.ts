@@ -105,6 +105,7 @@ export const RenderPreviewSchema = z.object({
   elevation: z.number().min(-90).max(90).default(30),
   width: z.number().int().min(100).max(4096).default(800),
   height: z.number().int().min(100).max(4096).default(600),
+  background: z.enum(["dark", "light", "transparent"]).default("dark").describe("Background mode: dark (#1a1a2e), light (white), or transparent"),
 });
 export type RenderPreviewInput = z.infer<typeof RenderPreviewSchema>;
 
