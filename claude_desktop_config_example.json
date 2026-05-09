@@ -1,0 +1,52 @@
+{
+  "_comment": "Copy the relevant block into your Claude Desktop config file.",
+  "_config_paths": {
+    "macOS":   "~/Library/Application Support/Claude/claude_desktop_config.json",
+    "Windows": "%APPDATA%\\Claude\\claude_desktop_config.json",
+    "Linux":   "~/.config/Claude/claude_desktop_config.json"
+  },
+
+  "mcpServers": {
+
+    "cad-mcp (npx — recommended, no install needed)": {
+      "command": "npx",
+      "args": ["-y", "cad-mcp"],
+      "env": {
+        "CAD_MCP_MODELS_DIR": "/Users/you/cad-models"
+      }
+    },
+
+    "cad-mcp (global npm install)": {
+      "command": "cad-mcp",
+      "env": {
+        "CAD_MCP_MODELS_DIR": "/Users/you/cad-models",
+        "CAD_MCP_PYTHON_CMD": "python3"
+      }
+    },
+
+    "cad-mcp (cloned repo — Windows)": {
+      "command": "node",
+      "args": ["C:/path/to/cad-mcp/dist/index.js"],
+      "env": {
+        "CAD_MCP_MODELS_DIR": "C:/Users/you/cad-models"
+      }
+    },
+
+    "cad-mcp (cloned repo — macOS/Linux)": {
+      "command": "node",
+      "args": ["/path/to/cad-mcp/dist/index.js"],
+      "env": {
+        "CAD_MCP_MODELS_DIR": "/Users/you/cad-models"
+      }
+    }
+
+  },
+
+  "_env_vars": {
+    "CAD_MCP_MODELS_DIR":            "Absolute path where exported STL/STEP/OBJ files are saved",
+    "CAD_MCP_PYTHON_CMD":            "Path to Python 3.9-3.12 executable (auto-detected if omitted)",
+    "CAD_MCP_LOGS_DIR":              "Path for server log files (default: ./logs next to the server)",
+    "CAD_MCP_GEOMETRY_TIMEOUT_MS":   "Geometry operation timeout in ms (default: 30000)",
+    "CAD_MCP_RENDER_TIMEOUT_MS":     "Render / preview timeout in ms (default: 60000)"
+  }
+}

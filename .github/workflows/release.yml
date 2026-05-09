@@ -1,0 +1,82 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write   # needed to create GitHub releases
+  id-token: write   # needed for npm provenance
+
+jobs:
+  release:
+    name: Publish & Release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      # ── Create npm tarball (Option 3 — GitHub release asset) ──────────────
+      - name: Pack npm tarball
+        run: npm pack
+
+      - name: Get tarball filename
+        id: tarball
+        run: echo "file=$(ls *.tgz)" >> $GITHUB_OUTPUT
+
+      # ── Publish to npm (Option 1) ─────────────────────────────────────────
+      # Set NPM_TOKEN in repo Settings → Secrets → Actions to enable this step.
+      - name: Publish to npm
+        if: ${{ env.NODE_AUTH_TOKEN != '' }}
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      # ── Create GitHub Release with tarball attached (Option 3) ────────────
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ steps.tarball.outputs.file }}
+          generate_release_notes: true
+          body: |
+            ## Installation
+
+            ### Option A — npm / npx (recommended)
+            ```bash
+            # Run without installing:
+            npx -y cad-mcp
+
+            # Or install globally:
+            npm install -g cad-mcp
+            ```
+
+            ### Option B — Direct download (no npm needed)
+            Download the `.tgz` asset below, extract it, then:
+            ```bash
+            tar -xzf cad-mcp-*.tgz
+            cd package
+            node dist/index.js
+            ```
+
+            ### Python setup (required for all options)
+            ```bash
+            # macOS / Linux
+            bash scripts/setup.sh
+
+            # Windows PowerShell
+            .\scripts\setup.ps1
+            ```
+
+            See [README](README.md) for full configuration instructions.

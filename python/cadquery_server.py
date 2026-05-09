@@ -48,7 +48,13 @@ PREVIEWS_DIR = MODELS_DIR / "previews"
 EXPORTS_DIR.mkdir(parents=True, exist_ok=True)
 PREVIEWS_DIR.mkdir(parents=True, exist_ok=True)
 
-TEMPLATES_DIR = Path("./templates").resolve()
+# Resolve templates relative to this script, not the process cwd, so it works
+# whether spawned from the bridge (cwd = package root) or run directly.
+SCRIPT_DIR    = Path(__file__).parent.resolve()
+TEMPLATES_DIR = (SCRIPT_DIR.parent / "templates").resolve()
+if not TEMPLATES_DIR.exists():
+    # Fallback: cwd-relative (handles edge-case installs)
+    TEMPLATES_DIR = Path("./templates").resolve()
 
 # ---------------------------------------------------------------------------
 # CadQuery import — graceful fallback message if not installed
@@ -112,6 +118,18 @@ def _get_model(name: str) -> Any:
         available = ", ".join(_models.keys()) if _models else "(none)"
         raise KeyError(f"Model '{name}' not found. Available models: {available}")
     return _models[name]
+
+
+def _is_trimesh_model(model: Any) -> bool:
+    """Return True when the model is a raw trimesh object (STL/OBJ import), not a CadQuery Workplane."""
+    return TRIMESH_AVAILABLE and hasattr(model, "faces") and hasattr(model, "vertices")
+
+
+def _coerce_trimesh(model: Any) -> Any:
+    """Flatten a trimesh.Scene to a single Trimesh if needed."""
+    if TRIMESH_AVAILABLE and isinstance(model, trimesh.scene.scene.Scene):
+        return trimesh.util.concatenate(list(model.geometry.values()))
+    return model
 
 
 # ===========================================================================
@@ -236,12 +254,22 @@ def handle_export_model(params: dict[str, Any]) -> dict[str, Any]:
 
     log.info("export_model: '%s' → %s (%s)", name, out_path, fmt)
 
-    if fmt == "STL":
+    if _is_trimesh_model(model):
+        # Trimesh-backed model (imported STL/OBJ) — use trimesh exporters directly
+        mesh = _coerce_trimesh(model)
+        if fmt in ("STL", "OBJ", "GLTF"):
+            mesh.export(str(out_path))
+        else:
+            raise ValueError(
+                f"Format '{fmt}' is not supported for mesh-imported models (STL/OBJ imports). "
+                "Supported formats for imported meshes: STL, OBJ, GLTF. "
+                "To export as STEP/DXF/SVG, first recreate the model with cad_create_model."
+            )
+    elif fmt == "STL":
         cq.exporters.export(model, str(out_path), cq.exporters.ExportTypes.STL)
     elif fmt == "STEP":
         cq.exporters.export(model, str(out_path), cq.exporters.ExportTypes.STEP)
     elif fmt == "OBJ":
-        # OBJ: trimesh round-trip
         if not TRIMESH_AVAILABLE:
             raise RuntimeError("trimesh is required for OBJ export. pip install trimesh")
         stl_tmp = _safe_output_path(f"{out_name}_tmp", EXPORTS_DIR, ".stl")
@@ -254,7 +282,6 @@ def handle_export_model(params: dict[str, Any]) -> dict[str, Any]:
     elif fmt == "SVG":
         cq.exporters.export(model, str(out_path), cq.exporters.ExportTypes.SVG)
     elif fmt == "GLTF":
-        # GLTF: trimesh round-trip via STL
         if not TRIMESH_AVAILABLE:
             raise RuntimeError("trimesh is required for GLTF export. pip install trimesh")
         stl_tmp = _safe_output_path(f"{out_name}_tmp", EXPORTS_DIR, ".stl")
@@ -291,11 +318,41 @@ def handle_query_properties(params: dict[str, Any]) -> dict[str, Any]:
 
     model = _get_model(name)
 
+    if _is_trimesh_model(model):
+        # Trimesh-backed model — compute properties directly from mesh
+        mesh = _coerce_trimesh(model)
+        bounds = mesh.bounds  # shape (2, 3): [[xmin,ymin,zmin],[xmax,ymax,zmax]]
+        xmin, ymin, zmin = float(bounds[0][0]), float(bounds[0][1]), float(bounds[0][2])
+        xmax, ymax, zmax = float(bounds[1][0]), float(bounds[1][1]), float(bounds[1][2])
+        volume_mm3       = float(mesh.volume) if mesh.is_watertight else float(mesh.convex_hull.volume)
+        surface_area_mm2 = float(mesh.area)
+        com              = mesh.center_mass
+        center_of_mass   = {"x": round(float(com[0]), 4), "y": round(float(com[1]), 4), "z": round(float(com[2]), 4)}
+        result: dict[str, Any] = {
+            "name": name,
+            "volume_mm3":       round(volume_mm3, 4),
+            "surface_area_mm2": round(surface_area_mm2, 4),
+            "bounding_box": {
+                "xmin": round(xmin, 4), "xmax": round(xmax, 4),
+                "ymin": round(ymin, 4), "ymax": round(ymax, 4),
+                "zmin": round(zmin, 4), "zmax": round(zmax, 4),
+                "width":  round(xmax - xmin, 4),
+                "depth":  round(ymax - ymin, 4),
+                "height": round(zmax - zmin, 4),
+            },
+            "center_of_mass": center_of_mass,
+        }
+        if density is not None:
+            mass_g = volume_mm3 * 0.001 * density
+            result["density_g_cm3"] = density
+            result["mass_g"]  = round(mass_g, 4)
+            result["mass_kg"] = round(mass_g / 1000, 6)
+        return result
+
     # CadQuery exposes a Shape object which we can query
     shape = model.val()
 
     bb = shape.BoundingBox()
-    props = cq.Shape.computeMass(shape) if hasattr(cq.Shape, "computeMass") else None
 
     # Use OCP (CadQuery 2.7+) for precise volume/surface calculations
     # Fall back to bounding-box estimate if OCP GProp is not available
@@ -457,14 +514,11 @@ def handle_apply_operation(params: dict[str, Any]) -> dict[str, Any]:
             raise ValueError("count must be >= 1")
         axis_map = {"X": (1, 0, 0), "Y": (0, 1, 0), "Z": (0, 0, 1)}
         d = axis_map.get(direction, (1, 0, 0))
-        result = model.rarray(spacing, 1, count, 1).add(model.val())  # simplification
-        result = model  # placeholder — full array implementation below
         shapes = [model.val()]
         for i in range(1, count):
             moved = model.translate((d[0] * spacing * i, d[1] * spacing * i, d[2] * spacing * i))
             shapes.append(moved.val())
-        compound = cq.Workplane("XY").add(cq.Compound.makeCompound(shapes))
-        result = compound
+        result = cq.Workplane("XY").add(cq.Compound.makeCompound(shapes))
 
     elif operation == "pattern_circular":
         count = int(op_p.get("count", 4))
@@ -591,7 +645,11 @@ def handle_validate_model(params: dict[str, Any]) -> dict[str, Any]:
     model = _get_model(name)
 
     stl_tmp = _safe_output_path(f"{name}_validate_tmp", EXPORTS_DIR, ".stl")
-    cq.exporters.export(model, str(stl_tmp), cq.exporters.ExportTypes.STL)
+    if _is_trimesh_model(model):
+        # Already a mesh — export directly without going through CadQuery
+        _coerce_trimesh(model).export(str(stl_tmp))
+    else:
+        cq.exporters.export(model, str(stl_tmp), cq.exporters.ExportTypes.STL)
 
     try:
         result = validate_mesh(str(stl_tmp), min_wall_thickness=min_thickness)
@@ -706,12 +764,10 @@ def handle_import_file(params: dict[str, Any]) -> dict[str, Any]:
     log.info("import_file: %s → model '%s'", file_path, out_name)
 
     if suffix == ".stl":
-        model = cq.importers.importStep(str(file_path)) if False else None
-        # Use trimesh for STL, rehydrate as CQ shape
+        # CadQuery has no native STL importer — use trimesh to load the mesh.
+        # Downstream tools (export, validate, repair) detect trimesh objects automatically.
         if TRIMESH_AVAILABLE:
-            mesh = trimesh.load(str(file_path))
-            # Store raw trimesh — a simplified approach
-            _models[out_name] = mesh
+            _models[out_name] = trimesh.load(str(file_path), force="mesh")
         else:
             raise RuntimeError("trimesh required for STL import. pip install trimesh")
     elif suffix in (".step", ".stp"):
@@ -720,8 +776,8 @@ def handle_import_file(params: dict[str, Any]) -> dict[str, Any]:
     elif suffix == ".obj":
         if not TRIMESH_AVAILABLE:
             raise RuntimeError("trimesh required for OBJ import. pip install trimesh")
-        mesh = trimesh.load(str(file_path))
-        _models[out_name] = mesh
+        raw = trimesh.load(str(file_path), force="mesh")
+        _models[out_name] = _coerce_trimesh(raw)
 
     return {
         "name": out_name,
@@ -791,104 +847,6 @@ def handle_sketch_2d(params: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def handle_ansys_simulate(params: dict[str, Any]) -> dict[str, Any]:
-    """
-    Run a finite element analysis (FEA) on a model using ANSYS MAPDL.
-
-    Replaces the Blender render tool with engineering-grade simulation.
-
-    Params:
-        name (str): model identifier to simulate
-        analysis_type (str): structural | modal | thermal
-        material (str | dict): material preset name OR custom props dict
-            Presets: steel, aluminum, stainless_steel, titanium, pla, nylon, abs
-        boundary_conditions (list, optional): list of BC dicts
-            [{"type": "fixed", "face": "bottom"}, ...]
-        loads (list, optional): list of load dicts
-            [{"type": "pressure", "face": "top", "value_mpa": 1.0}, ...]
-        mesh_size_mm (float, optional): FE mesh element size in mm (default 5.0)
-        output_name (str, optional): stem for result files
-
-    Returns (structural):
-        max_von_mises_stress_mpa, max_deformation_mm, safety_factor, status (PASS/WARN/FAIL)
-    Returns (modal):
-        natural_frequencies_hz, mode_count
-    Returns (thermal):
-        max_temperature_c, min_temperature_c, max_heat_flux_w_m2
-    """
-    if not CADQUERY_AVAILABLE:
-        raise RuntimeError("CadQuery is not installed.")
-
-    name = str(params["name"])
-    analysis_type = str(params.get("analysis_type", "structural")).lower()
-    material = params.get("material", "steel")
-    boundary_conditions = params.get("boundary_conditions", [{"type": "fixed", "face": "bottom"}])
-    loads = params.get("loads", [])
-    mesh_size_mm = float(params.get("mesh_size_mm", 5.0))
-    out_name = str(params.get("output_name", f"{name}_{analysis_type}"))
-
-    if analysis_type not in ("structural", "modal", "thermal"):
-        raise ValueError(
-            f"Unknown analysis_type '{analysis_type}'. Supported: structural, modal, thermal."
-        )
-
-    # Export model to STEP — the format ANSYS MAPDL reads best
-    model = _get_model(name)
-    step_path = _safe_output_path(f"{out_name}_ansys_input", EXPORTS_DIR, ".step")
-    if not isinstance(model, type(None)) and CADQUERY_AVAILABLE:
-        cq.exporters.export(model, str(step_path), cq.exporters.ExportTypes.STEP)
-
-    results_dir = EXPORTS_DIR / "ansys_results"
-    results_dir.mkdir(parents=True, exist_ok=True)
-
-    # Delegate to the ANSYS bridge
-    try:
-        import sys as _sys
-        _sys.path.insert(0, str(Path(__file__).parent))
-        from ansys_bridge import run_simulation  # type: ignore[import-not-found]
-
-        result = run_simulation(
-            step_file=str(step_path),
-            analysis_type=analysis_type,
-            material=material,
-            boundary_conditions=boundary_conditions,
-            loads=loads,
-            output_dir=str(results_dir),
-            output_name=out_name,
-            mesh_size_mm=mesh_size_mm,
-        )
-    except ImportError:
-        from ansys_bridge import _fallback_result, _resolve_material  # type: ignore[import-not-found]
-        result = _fallback_result(
-            analysis_type=analysis_type,
-            reason="ansys_bridge.py could not be imported.",
-            mat_props=_resolve_material(material),
-        )
-    finally:
-        step_path.unlink(missing_ok=True)
-
-    log.info(
-        "ansys_simulate: '%s' type=%s ansys_available=%s",
-        name,
-        analysis_type,
-        result.get("ansys_available", True),
-    )
-    return {"name": name, "analysis_type": analysis_type, **result}
-
-
-def handle_ansys_list_materials(_params: dict[str, Any]) -> dict[str, Any]:
-    """Return all available ANSYS material presets."""
-    try:
-        from ansys_bridge import list_materials  # type: ignore[import-not-found]
-        return list_materials()
-    except ImportError:
-        # Inline fallback
-        from ansys_bridge import MATERIAL_PRESETS  # type: ignore[import-not-found]
-        return {
-            "materials": [{"name": k, **v} for k, v in MATERIAL_PRESETS.items()],
-            "count": len(MATERIAL_PRESETS),
-        }
-
 def handle_translate_model(params: dict[str, Any]) -> dict[str, Any]:
     """
     Translate (move) a model by a (x, y, z) offset.
@@ -945,9 +903,12 @@ def handle_repair_mesh(params: dict[str, Any]) -> dict[str, Any]:
 
     model = _get_model(name)
 
-    # Export to a temp STL
+    # Export to a temp STL — trimesh models can skip the CadQuery export step
     tmp_stl = _safe_output_path(f"{name}_repair_tmp", EXPORTS_DIR, ".stl")
-    cq.exporters.export(model, str(tmp_stl), cq.exporters.ExportTypes.STL)
+    if _is_trimesh_model(model):
+        _coerce_trimesh(model).export(str(tmp_stl))
+    else:
+        cq.exporters.export(model, str(tmp_stl), cq.exporters.ExportTypes.STL)
 
     # Load with trimesh — force=mesh avoids returning a Scene for multi-body STLs
     raw = trimesh.load(str(tmp_stl), force="mesh")

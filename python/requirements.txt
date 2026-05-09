@@ -1,14 +1,18 @@
-# ─── OpenCASCADE Python bindings (MUST be listed before cadquery) ──────────────
+# ─── OpenCASCADE Python bindings ──────────────────────────────────────────────
 # cadquery-ocp provides the OCP module. Only has wheels for Python 3.9-3.12.
-# Requires Python ≤ 3.12 — use: uv venv .venv --python 3.12
+# REQUIRED: Python ≤ 3.12. Use: uv venv .venv --python 3.12
 cadquery-ocp>=7.7.0
 
 # ─── Core CAD engine ──────────────────────────────────────────────────────────
 cadquery>=2.3.0
 
-# ─── Mesh analysis, validation and repair ─────────────────────────────────────
+# ─── Mesh analysis, validation, repair and export ─────────────────────────────
 trimesh>=4.4.0
 scipy>=1.10.0        # required by trimesh.repair for fix_normals / connected-components
+
+# ─── Preview rendering (render_preview handler) ───────────────────────────────
+numpy>=1.24.0        # required by trimesh and matplotlib
+matplotlib>=3.7.0    # 3D preview PNG rendering via Poly3DCollection
 
 # ─── Testing ──────────────────────────────────────────────────────────────────
 pytest>=8.0.0

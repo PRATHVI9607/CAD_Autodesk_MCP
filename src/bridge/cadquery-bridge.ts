@@ -13,14 +13,53 @@ import fs from "fs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+// Package root — two levels up from dist/bridge/
+const PKG_ROOT = path.resolve(__dirname, "../..");
+
 // ---------------------------------------------------------------------------
 // Config (from environment with sensible defaults)
 // ---------------------------------------------------------------------------
 
-const PYTHON_CMD = process.env["CAD_MCP_PYTHON_CMD"] ?? "python";
 const GEOMETRY_TIMEOUT_MS = parseInt(process.env["CAD_MCP_GEOMETRY_TIMEOUT_MS"] ?? "30000", 10);
-const RENDER_TIMEOUT_MS = parseInt(process.env["CAD_MCP_RENDER_TIMEOUT_MS"] ?? "60000", 10);
-const PYTHON_SCRIPT = path.resolve(__dirname, "../../python/cadquery_server.py");
+const RENDER_TIMEOUT_MS   = parseInt(process.env["CAD_MCP_RENDER_TIMEOUT_MS"]   ?? "60000", 10);
+const PYTHON_SCRIPT       = path.resolve(PKG_ROOT, "python/cadquery_server.py");
+
+/**
+ * Resolve the Python executable to use, in priority order:
+ *   1. CAD_MCP_PYTHON_CMD env var (explicit override)
+ *   2. .venv inside the package root (Windows then Unix)
+ *   3. System python3 / python
+ */
+// Shell-injection guard: reject values that look like compound commands.
+// The value is passed directly to spawn() (not a shell), but an obviously
+// malformed path warrants an early, readable error.
+const FORBIDDEN_CMD_CHARS = /[;&|`$<>]/;
+
+function resolvePythonCmd(): string {
+  const explicit = process.env["CAD_MCP_PYTHON_CMD"];
+  if (explicit) {
+    if (FORBIDDEN_CMD_CHARS.test(explicit)) {
+      throw new Error(
+        `CAD_MCP_PYTHON_CMD contains unsafe characters: "${explicit}". ` +
+        "Provide a plain path to the Python executable."
+      );
+    }
+    return explicit;
+  }
+
+  const candidates = [
+    path.join(PKG_ROOT, ".venv", "Scripts", "python.exe"), // Windows venv
+    path.join(PKG_ROOT, ".venv", "bin",     "python"),     // Unix venv
+    path.join(PKG_ROOT, ".venv", "bin",     "python3"),    // Unix venv (alt)
+  ];
+  for (const c of candidates) {
+    if (fs.existsSync(c)) return c;
+  }
+  // Fall back to system Python; prefer python3 on non-Windows
+  return process.platform === "win32" ? "python" : "python3";
+}
+
+const PYTHON_CMD = resolvePythonCmd();
 
 // ---------------------------------------------------------------------------
 // Types
@@ -91,10 +130,8 @@ export class CadQueryBridge {
       );
     }
 
-    const workDir = path.resolve(__dirname, "../..");
-
     this.child = spawn(PYTHON_CMD, [PYTHON_SCRIPT], {
-      cwd: workDir,
+      cwd: PKG_ROOT,
       env: { ...process.env },
       stdio: ["pipe", "pipe", "pipe"],
     });

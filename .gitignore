@@ -1,13 +1,15 @@
 # ── Node ─────────────────────────────────────────────────────────────────────
 node_modules/
 dist/
-*.js.map
+*.tsbuildinfo
 
-# ── Skills / AI assistant context (not part of the project) ──────────────────
+# ── Skills / AI assistant context ────────────────────────────────────────────
 everything-claude-code/
-.claude/
 
-# ── Python virtualenv (uv) ────────────────────────────────────────────────────
+# ── Claude Code — only local/private settings are excluded ───────────────────
+.claude/settings.local.json
+
+# ── Python virtualenv ────────────────────────────────────────────────────────
 .venv/
 __pycache__/
 *.pyc
@@ -15,8 +17,9 @@ __pycache__/
 *.pyd
 *.egg-info/
 .pytest_cache/
+.python-version
 
-# ── Generated model files (large binaries, not version controlled) ────────────
+# ── Generated model files (large binaries) ────────────────────────────────────
 models/exports/*
 models/previews/*
 !models/exports/.gitkeep
@@ -24,16 +27,20 @@ models/previews/*
 
 # ── Logs ─────────────────────────────────────────────────────────────────────
 logs/*.log
+!logs/.gitkeep
 
 # ── Test coverage ─────────────────────────────────────────────────────────────
 coverage/
 .nyc_output/
 htmlcov/
 .coverage
+*.lcov
 
 # ── OS ───────────────────────────────────────────────────────────────────────
 .DS_Store
+.DS_Store?
 Thumbs.db
+ehthumbs.db
 desktop.ini
 
 # ── IDE ───────────────────────────────────────────────────────────────────────
@@ -41,6 +48,20 @@ desktop.ini
 .idea/
 *.swp
 *.swo
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
 
-# ── Secrets — rename .mcp.json.example → .mcp.json and fill in your keys ─────
-# .mcp.json is committed with placeholder values — DO NOT commit real keys
+# ── Secrets / env ─────────────────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# ── Temp / scratch ────────────────────────────────────────────────────────────
+tmp/
+temp/
+*.tmp
+*.bak

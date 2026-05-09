@@ -1,13 +1,32 @@
 {
   "name": "cad-mcp",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "MCP server for CAD and 3D modelling — create, edit, export, and reason about 3D models",
-  "author": "",
+  "author": "PRATHVI9607",
   "license": "MIT",
   "type": "module",
   "main": "dist/index.js",
+  "bin": {
+    "cad-mcp": "./dist/index.js"
+  },
+  "files": [
+    "dist/",
+    "python/",
+    "templates/",
+    "scripts/",
+    "models/exports/.gitkeep",
+    "models/previews/.gitkeep",
+    "logs/.gitkeep",
+    "README.md",
+    "USER_MANUAL.md",
+    "claude_desktop_config_example.json"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "scripts": {
     "build": "tsc",
+    "prepare": "npm run build",
     "dev": "tsx watch src/index.ts",
     "start": "node dist/index.js",
     "start:http": "node dist/http-server.js",
@@ -15,7 +34,9 @@
     "test": "jest",
     "test:http": "node tests/test-http-api.mjs",
     "test:all": "npm run build && start /B npm run start:http && timeout /t 3 && npm run test:http",
-    "clean": "rimraf dist"
+    "clean": "rimraf dist",
+    "setup:python:win": "python -m venv .venv && .venv\\Scripts\\pip install -r python\\requirements.txt",
+    "setup:python:unix": "python3 -m venv .venv && .venv/bin/pip install -r python/requirements.txt"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.0",

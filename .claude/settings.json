@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__cad-mcp__cad_create_model",
+      "mcp__cad-mcp__cad_export_model",
+      "mcp__cad-mcp__cad_query_properties",
+      "mcp__cad-mcp__cad_apply_operation",
+      "mcp__cad-mcp__cad_validate_model",
+      "mcp__cad-mcp__cad_list_templates",
+      "mcp__cad-mcp__cad_load_template",
+      "mcp__cad-mcp__cad_import_file",
+      "mcp__cad-mcp__cad_sketch_2d",
+      "mcp__cad-mcp__cad_translate_model",
+      "mcp__cad-mcp__cad_repair_mesh",
+      "Bash(npm run build)",
+      "Bash(npm run typecheck)",
+      "Bash(npm run test:http)",
+      "Bash(npm run start:http)",
+      "Bash(npm run clean)",
+      "Bash(node dist/index.js)",
+      "Bash(node dist/http-server.js)"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": ["cad-mcp"]
+}

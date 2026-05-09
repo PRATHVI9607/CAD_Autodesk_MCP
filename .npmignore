@@ -1,0 +1,50 @@
+# Files excluded from the npm package.
+# The package.json "files" allowlist takes precedence, but this is belt-and-suspenders
+# to prevent accidentally publishing sensitive or unnecessary content.
+
+# Source (pre-compiled — dist/ is included via files field)
+src/
+tsconfig.json
+tsconfig*.json
+pyrightconfig.json
+pytest.ini
+
+# Tests
+tests/
+
+# Dev tooling
+.github/
+everything-claude-code/
+.claude/
+.venv/
+
+# Docs / planning (not needed at runtime)
+plan.md
+PRD.md
+CLAUDE.md
+CLAUDE_CODE_PROMPT.md
+
+# Logs and generated outputs
+logs/
+models/exports/*
+models/previews/*
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+
+# Secrets
+.env
+.env.*
+*.pem
+*.key
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+*.egg-info/
