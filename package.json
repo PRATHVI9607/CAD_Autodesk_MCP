@@ -1,6 +1,6 @@
 {
   "name": "loki-cad-mcp",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "MCP server for CAD and 3D modelling — create, edit, export, and reason about 3D models",
   "author": "PRATHVI9607",
   "license": "MIT",
