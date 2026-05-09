@@ -4,6 +4,14 @@
   "description": "MCP server for CAD and 3D modelling — create, edit, export, and reason about 3D models",
   "author": "PRATHVI9607",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/PRATHVI9607/CAD_Autodesk_MCP.git"
+  },
+  "homepage": "https://github.com/PRATHVI9607/CAD_Autodesk_MCP#readme",
+  "bugs": {
+    "url": "https://github.com/PRATHVI9607/CAD_Autodesk_MCP/issues"
+  },
   "type": "module",
   "main": "dist/index.js",
   "bin": {
