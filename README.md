@@ -122,17 +122,23 @@ pip install -r python/requirements.txt
 
 ## Configure Claude Desktop
 
-Open your Claude Desktop config file:
+This is how you wire up the server — you never run `npx` manually.
+Claude Desktop reads this config file and launches the server automatically.
+
+### Step 1 — Open your config file
 
 | Platform | Path |
 |----------|------|
-| macOS    | `~/Library/Application Support/Claude/claude_desktop_config.json` |
 | Windows  | `%APPDATA%\Claude\claude_desktop_config.json` |
+| macOS    | `~/Library/Application Support/Claude/claude_desktop_config.json` |
 | Linux    | `~/.config/Claude/claude_desktop_config.json` |
 
-Paste one of these blocks and **replace the `CAD_MCP_MODELS_DIR` path with your own folder**:
+Open it in any text editor (Notepad, VS Code, etc.). If it doesn't exist yet, create it.
 
-**npx (recommended — nothing to install):**
+### Step 2 — Paste the config for your platform
+
+#### Windows — npx
+
 ```json
 {
   "mcpServers": {
@@ -148,10 +154,56 @@ Paste one of these blocks and **replace the `CAD_MCP_MODELS_DIR` path with your 
 }
 ```
 
-> On macOS/Linux replace the path with e.g. `/Users/yourname/Documents/cad-models`
-> and `"CAD_MCP_PYTHON_CMD": "python3"`.
+#### macOS — npx
 
-**Cloned repo:**
+```json
+{
+  "mcpServers": {
+    "loki-cad-mcp": {
+      "command": "npx",
+      "args": ["-y", "loki-cad-mcp"],
+      "env": {
+        "CAD_MCP_MODELS_DIR": "/Users/yourname/Documents/cad-models",
+        "CAD_MCP_PYTHON_CMD": "python3"
+      }
+    }
+  }
+}
+```
+
+#### Linux — npx
+
+```json
+{
+  "mcpServers": {
+    "loki-cad-mcp": {
+      "command": "npx",
+      "args": ["-y", "loki-cad-mcp"],
+      "env": {
+        "CAD_MCP_MODELS_DIR": "/home/yourname/cad-models",
+        "CAD_MCP_PYTHON_CMD": "python3"
+      }
+    }
+  }
+}
+```
+
+**Replace `YourName` / `yourname` with your actual username.**
+The folder (`cad-models`) is created automatically — you do not need to make it yourself.
+
+### Step 3 — Restart Claude Desktop
+
+Close and reopen Claude Desktop. The server starts automatically on the first tool call.
+
+Your exported files will appear at:
+- **Windows:** `C:\Users\YourName\Documents\cad-models\exports\`
+- **macOS/Linux:** `~/Documents/cad-models/exports/`
+
+---
+
+### Cloned repo config (if you cloned instead of using npx)
+
+#### Windows
 ```json
 {
   "mcpServers": {
@@ -161,6 +213,22 @@ Paste one of these blocks and **replace the `CAD_MCP_MODELS_DIR` path with your 
       "env": {
         "CAD_MCP_MODELS_DIR": "C:/Users/YourName/Documents/cad-models",
         "CAD_MCP_PYTHON_CMD": "C:/path/to/CAD_Autodesk_MCP/.venv/Scripts/python.exe"
+      }
+    }
+  }
+}
+```
+
+#### macOS / Linux
+```json
+{
+  "mcpServers": {
+    "loki-cad-mcp": {
+      "command": "node",
+      "args": ["/path/to/CAD_Autodesk_MCP/dist/index.js"],
+      "env": {
+        "CAD_MCP_MODELS_DIR": "/Users/yourname/Documents/cad-models",
+        "CAD_MCP_PYTHON_CMD": "/path/to/CAD_Autodesk_MCP/.venv/bin/python"
       }
     }
   }
@@ -206,7 +274,7 @@ CAD_MCP_MODELS_DIR/previews/   (PNG previews)
 
 ```bash
 # Clone & install
-git clone https://github.com/PRATHVI9607/cad-mcp.git
+git clone https://github.com/PRATHVI9607/CAD_Autodesk_MCP.git
 cd cad-mcp
 npm install
 
