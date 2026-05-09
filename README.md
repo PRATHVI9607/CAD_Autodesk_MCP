@@ -50,7 +50,7 @@ And it just works — no GUI, no scripts, pure conversation.
 ### Option 1 — npx (nothing to install)
 
 ```bash
-npx -y cad-mcp
+npx -y loki-cad-mcp
 ```
 
 Add to Claude Desktop's config and npx handles everything else.
@@ -58,7 +58,7 @@ Add to Claude Desktop's config and npx handles everything else.
 ### Option 2 — Global npm install
 
 ```bash
-npm install -g cad-mcp
+npm install -g loki-cad-mcp
 ```
 
 Then run `cad-mcp` directly.

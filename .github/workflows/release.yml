@@ -56,7 +56,7 @@ jobs:
             ### Option A — npm / npx (recommended)
             ```bash
             # Run without installing:
-            npx -y cad-mcp
+            npx -y loki-cad-mcp
 
             # Or install globally:
             npm install -g cad-mcp

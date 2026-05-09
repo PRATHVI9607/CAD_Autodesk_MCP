@@ -10,14 +10,14 @@
 
     "cad-mcp (npx — recommended, no install needed)": {
       "command": "npx",
-      "args": ["-y", "cad-mcp"],
+      "args": ["-y", "loki-cad-mcp"],
       "env": {
         "CAD_MCP_MODELS_DIR": "/Users/you/cad-models"
       }
     },
 
     "cad-mcp (global npm install)": {
-      "command": "cad-mcp",
+      "command": "loki-cad-mcp",
       "env": {
         "CAD_MCP_MODELS_DIR": "/Users/you/cad-models",
         "CAD_MCP_PYTHON_CMD": "python3"

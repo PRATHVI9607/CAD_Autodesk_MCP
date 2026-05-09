@@ -1,5 +1,5 @@
 {
-  "name": "cad-mcp",
+  "name": "loki-cad-mcp",
   "version": "1.0.0",
   "description": "MCP server for CAD and 3D modelling — create, edit, export, and reason about 3D models",
   "author": "PRATHVI9607",
@@ -7,7 +7,7 @@
   "type": "module",
   "main": "dist/index.js",
   "bin": {
-    "cad-mcp": "./dist/index.js"
+    "loki-cad-mcp": "./dist/index.js"
   },
   "files": [
     "dist/",
