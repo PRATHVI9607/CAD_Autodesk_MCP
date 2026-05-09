@@ -1,6 +1,6 @@
 {
   "name": "loki-cad-mcp",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "MCP server for CAD and 3D modelling — create, edit, export, and reason about 3D models",
   "author": "PRATHVI9607",
   "license": "MIT",
@@ -61,7 +61,9 @@
   },
   "jest": {
     "preset": "ts-jest/presets/default-esm",
-    "extensionsToTreatAsEsm": [".ts"],
+    "extensionsToTreatAsEsm": [
+      ".ts"
+    ],
     "testEnvironment": "node",
     "testMatch": [
       "**/tests/**/*.test.ts",
