@@ -207,13 +207,14 @@ export class CadQueryBridge {
         if (!started) {
           rejectStart(
             new Error(
-              "Python geometry server did not start within 10 seconds. " +
-              "Check that CadQuery is installed: pip install cadquery"
+              "Python geometry server did not start within 45 seconds. " +
+              "Check that CadQuery is installed in your Python env. " +
+              "Run: scripts/setup.ps1 (Windows) or bash scripts/setup.sh (macOS/Linux)"
             )
           );
           this.child?.kill();
         }
-      }, 10_000);
+      }, 45_000); // CadQuery + OpenCASCADE can take 30-45s on cold first import
 
       this.child!.on("exit", () => {
         clearTimeout(startupTimer);

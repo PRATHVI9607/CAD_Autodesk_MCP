@@ -6,7 +6,8 @@
       "env": {
         "CAD_MCP_MODELS_DIR": "./models",
         "CAD_MCP_LOGS_DIR": "./logs",
-        "CAD_MCP_GEOMETRY_TIMEOUT_MS": "30000"
+        "CAD_MCP_PYTHON_CMD": ".venv\\Scripts\\python.exe",
+        "CAD_MCP_GEOMETRY_TIMEOUT_MS": "60000"
       }
     }
   }

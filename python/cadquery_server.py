@@ -122,7 +122,9 @@ def _get_model(name: str) -> Any:
 
 def _is_trimesh_model(model: Any) -> bool:
     """Return True when the model is a raw trimesh object (STL/OBJ import), not a CadQuery Workplane."""
-    return TRIMESH_AVAILABLE and hasattr(model, "faces") and hasattr(model, "vertices")
+    if not TRIMESH_AVAILABLE:
+        return False
+    return isinstance(model, (trimesh.Trimesh, trimesh.scene.scene.Scene))
 
 
 def _coerce_trimesh(model: Any) -> Any:
@@ -177,7 +179,9 @@ def handle_create_model(params: dict[str, Any]) -> dict[str, Any]:
 
     if shape == "box":
         w, h, d = dim("width", 10), dim("height", 10), dim("depth", 10)
-        result = cq.Workplane("XY").box(w, h, d)
+        # CadQuery box(length, width, height) maps to (X, Y, Z).
+        # Our params: width→X, depth→Y, height→Z matches user intuition.
+        result = cq.Workplane("XY").box(w, d, h)
 
     elif shape == "cylinder":
         r = dim("radius", 5)
