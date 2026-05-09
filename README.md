@@ -1,10 +1,10 @@
-# cad-mcp — CAD & 3D Modelling MCP Server
+# loki-cad-mcp — CAD & 3D Modelling MCP Server
 
 > Give AI assistants real CAD superpowers — create, edit, validate, and export 3D models
 > without opening SolidWorks, Fusion 360, or Blender.
 
-[![npm version](https://img.shields.io/npm/v/cad-mcp)](https://www.npmjs.com/package/cad-mcp)
-[![CI](https://github.com/PRATHVI9607/cad-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/PRATHVI9607/cad-mcp/actions/workflows/ci.yml)
+[![npm version](https://img.shields.io/npm/v/loki-cad-mcp)](https://www.npmjs.com/package/loki-cad-mcp)
+[![CI](https://github.com/PRATHVI9607/CAD_Autodesk_MCP/actions/workflows/ci.yml/badge.svg)](https://github.com/PRATHVI9607/CAD_Autodesk_MCP/actions/workflows/ci.yml)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue)](https://www.typescriptlang.org/)
 [![Python](https://img.shields.io/badge/Python-3.9–3.12-yellow)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green)](LICENSE)
@@ -38,6 +38,32 @@ And it just works — no GUI, no scripts, pure conversation.
 
 ---
 
+## Where Are My Files Saved?
+
+Every model you export (STL, STEP, OBJ, etc.) lands in a folder you control.
+**Set `CAD_MCP_MODELS_DIR` in your config to a real folder on your machine — this is the most important setting.**
+
+| Platform | Recommended value |
+|----------|------------------|
+| Windows  | `C:/Users/YourName/Documents/cad-models` |
+| macOS    | `/Users/yourname/Documents/cad-models` |
+| Linux    | `/home/yourname/cad-models` |
+
+> **Why does this matter for npx?**
+> Without `CAD_MCP_MODELS_DIR`, files are saved inside the npx cache
+> (`~/.npm/_npx/<hash>/node_modules/loki-cad-mcp/models/exports/`) — buried and hard to find.
+> Always set this variable.
+
+The folder is created automatically if it doesn't exist. Inside it you'll find:
+
+```
+cad-models/
+├── exports/   ← your STL, STEP, OBJ, GLTF, DXF, SVG files
+└── previews/  ← PNG preview images
+```
+
+---
+
 ## Installation
 
 ### Prerequisites
@@ -49,11 +75,11 @@ And it just works — no GUI, no scripts, pure conversation.
 
 ### Option 1 — npx (nothing to install)
 
+No global install needed — npx downloads and runs the package on demand.
+
 ```bash
 npx -y loki-cad-mcp
 ```
-
-Add to Claude Desktop's config and npx handles everything else.
 
 ### Option 2 — Global npm install
 
@@ -61,20 +87,20 @@ Add to Claude Desktop's config and npx handles everything else.
 npm install -g loki-cad-mcp
 ```
 
-Then run `cad-mcp` directly.
+Then reference `loki-cad-mcp` as the command in your config.
 
 ### Option 3 — Clone & build
 
 ```bash
-git clone https://github.com/PRATHVI9607/cad-mcp.git
-cd cad-mcp
+git clone https://github.com/PRATHVI9607/CAD_Autodesk_MCP.git
+cd CAD_Autodesk_MCP
 npm install          # builds dist/ automatically
 ```
 
-### Python setup (all options)
+### Python setup (required for all options)
 
 CadQuery must be installed in a Python 3.9–3.12 environment.
-The server auto-detects a `.venv` next to the package; run the setup script once:
+Run the setup script once — it creates a `.venv` and installs all dependencies:
 
 ```bash
 # macOS / Linux
@@ -96,39 +122,45 @@ pip install -r python/requirements.txt
 
 ## Configure Claude Desktop
 
-Copy the appropriate block from [`claude_desktop_config_example.json`](claude_desktop_config_example.json)
-into your Claude Desktop config file:
+Open your Claude Desktop config file:
 
-| Platform | Config file path |
-|----------|-----------------|
+| Platform | Path |
+|----------|------|
 | macOS    | `~/Library/Application Support/Claude/claude_desktop_config.json` |
 | Windows  | `%APPDATA%\Claude\claude_desktop_config.json` |
 | Linux    | `~/.config/Claude/claude_desktop_config.json` |
 
-**Quickest setup (npx):**
+Paste one of these blocks and **replace the `CAD_MCP_MODELS_DIR` path with your own folder**:
+
+**npx (recommended — nothing to install):**
 ```json
 {
   "mcpServers": {
-    "cad-mcp": {
+    "loki-cad-mcp": {
       "command": "npx",
-      "args": ["-y", "cad-mcp"],
+      "args": ["-y", "loki-cad-mcp"],
       "env": {
-        "CAD_MCP_MODELS_DIR": "/Users/you/cad-models"
+        "CAD_MCP_MODELS_DIR": "C:/Users/YourName/Documents/cad-models",
+        "CAD_MCP_PYTHON_CMD": "python"
       }
     }
   }
 }
 ```
 
+> On macOS/Linux replace the path with e.g. `/Users/yourname/Documents/cad-models`
+> and `"CAD_MCP_PYTHON_CMD": "python3"`.
+
 **Cloned repo:**
 ```json
 {
   "mcpServers": {
-    "cad-mcp": {
+    "loki-cad-mcp": {
       "command": "node",
-      "args": ["/absolute/path/to/cad-mcp/dist/index.js"],
+      "args": ["C:/path/to/CAD_Autodesk_MCP/dist/index.js"],
       "env": {
-        "CAD_MCP_MODELS_DIR": "/Users/you/cad-models"
+        "CAD_MCP_MODELS_DIR": "C:/Users/YourName/Documents/cad-models",
+        "CAD_MCP_PYTHON_CMD": "C:/path/to/CAD_Autodesk_MCP/.venv/Scripts/python.exe"
       }
     }
   }
@@ -141,14 +173,11 @@ into your Claude Desktop config file:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `CAD_MCP_MODELS_DIR` | `./models` | Where exported files are saved |
-| `CAD_MCP_PYTHON_CMD` | auto-detected | Path to Python 3.9-3.12 executable |
-| `CAD_MCP_LOGS_DIR` | `./logs` | Server log file directory |
-| `CAD_MCP_GEOMETRY_TIMEOUT_MS` | `30000` | Geometry op timeout (ms) |
-| `CAD_MCP_RENDER_TIMEOUT_MS` | `60000` | Render/preview timeout (ms) |
-
-Python auto-detection order: `.venv/Scripts/python.exe` → `.venv/bin/python` → system `python3`/`python`.
-Override with `CAD_MCP_PYTHON_CMD` if needed.
+| `CAD_MCP_MODELS_DIR` | `./models` ⚠️ | **Set this to an absolute path.** Default buries files in the npx cache when using npx. |
+| `CAD_MCP_PYTHON_CMD` | auto-detected | Path to Python 3.9–3.12 executable. Auto-detects `.venv` first, then system `python3`/`python`. |
+| `CAD_MCP_LOGS_DIR` | `./logs` | Server log file directory. |
+| `CAD_MCP_GEOMETRY_TIMEOUT_MS` | `30000` | Geometry operation timeout in ms. |
+| `CAD_MCP_RENDER_TIMEOUT_MS` | `60000` | Render/preview timeout in ms. |
 
 ---
 
