@@ -14,6 +14,7 @@ import { createModel }     from "./tools/create-model.js";
 import { exportModel }     from "./tools/export-model.js";
 import { queryProperties } from "./tools/query-model.js";
 import { applyOperation }  from "./tools/modify-model.js";
+import { renderPreview }   from "./tools/render-preview.js";
 import { validateModel }   from "./tools/validate-model.js";
 import {
   listTemplates,
@@ -139,7 +140,25 @@ server.registerTool(
   async (input) => toMcpContent(await applyOperation(input as Record<string, unknown>))
 );
 
-// ── Tool 5: cad_validate_model ───────────────────────────────────────────
+// ── Tool 5: cad_render_preview ───────────────────────────────────────────
+
+server.tool(
+  "cad_render_preview",
+  "Render a PNG preview of a model from a camera angle. " +
+  "Choose background: 'dark' (default, navy), 'light' (white), or 'transparent'.",
+  {
+    name:        ModelName,
+    output_name: ModelName.optional(),
+    azimuth:     z.number().min(0).max(360).default(45).describe("Camera azimuth in degrees"),
+    elevation:   z.number().min(-90).max(90).default(30).describe("Camera elevation in degrees"),
+    width:       z.number().int().min(100).max(4096).default(800).describe("Image width in pixels"),
+    height:      z.number().int().min(100).max(4096).default(600).describe("Image height in pixels"),
+    background:  z.enum(["dark", "light", "transparent"]).default("dark").describe("Background mode: dark, light, or transparent"),
+  },
+  async (input) => toMcpContent(await renderPreview(input as Record<string, unknown>))
+);
+
+// ── Tool 6: cad_validate_model ───────────────────────────────────────────
 
 server.registerTool(
   "cad_validate_model",
@@ -154,7 +173,7 @@ server.registerTool(
   async (input) => toMcpContent(await validateModel(input as Record<string, unknown>))
 );
 
-// ── Tool 6: cad_list_templates ───────────────────────────────────────────
+// ── Tool 7: cad_list_templates ───────────────────────────────────────────
 
 server.registerTool(
   "cad_list_templates",
@@ -284,7 +303,7 @@ async function main(): Promise<void> {
   process.on("SIGINT",  () => { void shutdown(); });
   process.on("SIGTERM", () => { void shutdown(); });
   await server.connect(transport);
-  process.stderr.write("cad-mcp ready — 11 CAD tools active (stdio)\n");
+  process.stderr.write("cad-mcp ready — 12 CAD tools active (stdio)\n");
 }
 
 main().catch((err: unknown) => {
